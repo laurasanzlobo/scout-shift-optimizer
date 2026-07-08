@@ -19,8 +19,8 @@
   /* ramas */
   --castores: #FF8C00;  --castores-t: #fff;
   --lobatos:  #E6B800;  --lobatos-t:  #1a1400;
-  --ranger1:  #2EA043;  --ranger1-t:  #fff;
-  --ranger2:  #1A6B30;  --ranger2-t:  #fff;
+  --ranger:   #1E88E5;  --ranger-t:   #fff;
+  --rutas:    #43A047;  --rutas-t:    #fff;
   --pioneros: #C62828;  --pioneros-t: #fff;
 
   /* turnos */
@@ -350,7 +350,7 @@ body {
   border-color: var(--border-md);
 }
 .lstep.done {
-  color: var(--ranger1);
+  color: var(--ranger);
 }
 .lstep-icon { font-size: 15px; flex-shrink: 0; width: 20px; text-align: center; }
 .lstep-text { flex: 1; }
@@ -400,7 +400,7 @@ body {
   letter-spacing: 0.2px;
 }
 .btn-dl:hover { background: var(--bg-raised); color: var(--text-1); }
-.btn-dl.excel:hover { border-color: var(--ranger1); color: var(--ranger1); }
+.btn-dl.excel:hover { border-color: var(--ranger); color: var(--ranger); }
 .btn-dl.pdf:hover   { border-color: #E53935; color: #E53935; }
 .btn-dl i { font-size: 15px; }
 

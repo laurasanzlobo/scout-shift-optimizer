@@ -1,10 +1,10 @@
 % Modelo de asignación de turnos de Comedor - Campamento Verano 2026
 
-% He mapeado los días reales del campamento (20 al 30 de julio) directamente al set de DIAS 
+% He mapeado los días reales del campamento (15 al 30 de julio) directamente al set de DIAS 
 % para mantener la coherencia con las fechas y facilitar la indexación.
-set of int: DIAS = 20..30;
+set of int: DIAS = 1..13;
 set of int: TURNOS = 1..3; % 1: Desayuno, 2: Comida, 3: Cena
-set of int: GRUPOS = 1..5; % 1: Castores, 2: Lobatos, 3: Ranger1, 4: Ranger2, 5: Pioneros
+set of int: GRUPOS = 1..5; % 1: Castores, 2: Lobatos, 3: Ranger, 4: Pioneros, 5: Rutas
 
 int: n_personas;
 set of int: PERSONAS = 1..n_personas;
@@ -72,9 +72,9 @@ constraint forall(p in PERSONAS) (
 % FUNCIÓN OBJETIVO Y RESTRICCIONES FLEXIBLES (Soft Constraints)
 % -----------------------------------------------------------------------------
 
-% Penalizo la falta de representación. Intento asegurar que haya al menos un responsable 
-% por grupo sirviendo (siempre que su grupo no esté limpiando).
-var int: pen_representacion = sum(d in DIAS, t in TURNOS, g in GRUPOS where turno_activo[d, t] /\ grupo_limpia[d, t] != g) (
+% Penalizo la falta de representación. Excluyo Rutas de esta regla porque solo hay
+% un responsable y no debe bloquearse su servicio por una cobertura de grupo.
+var int: pen_representacion = sum(d in DIAS, t in TURNOS, g in GRUPOS where turno_activo[d, t] /\ grupo_limpia[d, t] != g /\ g != 5) (
     bool2int(sum(p in PERSONAS where grupo_persona[p] == g)(comedor[d, t, p]) == 0)
 );
 

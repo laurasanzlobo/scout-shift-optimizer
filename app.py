@@ -10,7 +10,7 @@ from pathlib import Path
 
 from flask import Flask, request, jsonify, send_file, render_template, abort
 
-from optimization import cargar_responsables, plan_limpieza, resolver_con_minizinc
+from optimization import cargar_responsables, plan_limpieza, resolver_con_minizinc, DIAS
 from report_generator import generar_excel, generar_pdf
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -131,12 +131,11 @@ def generar_horario():
                            "Comprueba disponibilidades y vuelve a intentarlo."
             }), 422
 
-        dias = list(range(20, 31))
         turnos_nombres = ["Desayuno", "Comida", "Cena"]
         matriz_comedor = resultado.solution.comedor
 
         asignaciones_finales = []
-        for d_idx, d in enumerate(dias):
+        for d_idx, d in enumerate(DIAS):
             for t_idx, t_name in enumerate(turnos_nombres):
                 for p_idx, (_, row) in enumerate(df_original.iterrows()):
                     if matriz_comedor[d_idx][t_idx][p_idx]:

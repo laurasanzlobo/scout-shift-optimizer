@@ -68,9 +68,9 @@
         <circle class="ember" cx="52" cy="38" r="1.5" fill="#E6B800"/>
 
         <ellipse class="flame flame-5" cx="45" cy="46" rx="7" ry="18" fill="#E6B800" opacity="0.55"/>
-        <ellipse class="flame flame-4" cx="36" cy="50" rx="6" ry="14" fill="#1A6B30" opacity="0.6"/>
+        <ellipse class="flame flame-4" cx="36" cy="50" rx="6" ry="14" fill="#43A047" opacity="0.6"/>
         <ellipse class="flame flame-3" cx="54" cy="50" rx="6" ry="14" fill="#C62828" opacity="0.6"/>
-        <ellipse class="flame flame-2" cx="40" cy="52" rx="7" ry="16" fill="#2EA043" opacity="0.8"/>
+        <ellipse class="flame flame-2" cx="40" cy="52" rx="7" ry="16" fill="#1E88E5" opacity="0.8"/>
         <ellipse class="flame flame-1" cx="50" cy="52" rx="7" ry="16" fill="#FF8C00" opacity="0.85"/>
         <ellipse class="flame flame-3" cx="45" cy="55" rx="6" ry="12" fill="#FFAD0D"/>
         <ellipse class="flame flame-1" cx="45" cy="57" rx="3.5" ry="7" fill="#FFF0A0"/>
@@ -154,9 +154,9 @@
 const COLORES = {
   Castores: { bg: '#FF8C00', t: '#fff' },
   Lobatos:  { bg: '#E6B800', t: '#1a1400' },
-  Ranger1:  { bg: '#2EA043', t: '#fff' },
-  Ranger2:  { bg: '#1A6B30', t: '#fff' },
+  Ranger:   { bg: '#1E88E5', t: '#fff' },
   Pioneros: { bg: '#C62828', t: '#fff' },
+  Rutas:    { bg: '#43A047', t: '#fff' },
 };
 const TURNO_ACCENT = {
   Desayuno: '#FFAD0D',
@@ -233,7 +233,7 @@ function animateSteps() {
       const prev = document.getElementById(steps[i - 1]);
       prev.classList.remove('active');
       prev.classList.add('done');
-      prev.querySelector('.lstep-icon').innerHTML = '<i class="ti ti-circle-check" style="color:#2EA043"></i>';
+      prev.querySelector('.lstep-icon').innerHTML = '<i class="ti ti-circle-check" style="color:#1E88E5"></i>';
     }
     if (i < steps.length) {
       document.getElementById(steps[i]).classList.add('active');

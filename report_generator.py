@@ -19,9 +19,9 @@ import weasyprint
 COLORES_GRUPOS = {
     "Castores":  {"hex": "FF9800", "texto": "FFFFFF", "bg_ligero": "FFF3E0"},  
     "Lobatos":   {"hex": "FBC02D", "texto": "333333", "bg_ligero": "FFF9C4"},  
-    "Ranger1":   {"hex": "4CAF50", "texto": "FFFFFF", "bg_ligero": "E8F5E9"},  
-    "Ranger2":   {"hex": "2E7D32", "texto": "FFFFFF", "bg_ligero": "C8E6C9"},  
+    "Ranger":    {"hex": "1E88E5", "texto": "FFFFFF", "bg_ligero": "E3F2FD"},  
     "Pioneros":  {"hex": "D32F2F", "texto": "FFFFFF", "bg_ligero": "FFEBEE"},  
+    "Rutas":     {"hex": "43A047", "texto": "FFFFFF", "bg_ligero": "E8F5E9"},  
 }
 
 COLORES_TURNOS = {
@@ -30,7 +30,7 @@ COLORES_TURNOS = {
     "Cena":     "BBDEFB",
 }
 
-DIAS = list(range(20, 31))
+DIAS = [d for d in range(15, 31) if d not in {17, 18, 19}]
 TURNOS = ["Desayuno", "Comida", "Cena"]
 
 
@@ -191,7 +191,6 @@ def _hoja_datos(wb: Workbook, df: pd.DataFrame):
 # ─────────────────────────────────────────────────────────────────────────────
 # PDF — Diseño "Presentación Diapositivas"
 # ─────────────────────────────────────────────────────────────────────────────
-
 _PLANTILLA_HTML = """
 <!DOCTYPE html>
 <html lang="es">
@@ -200,237 +199,218 @@ _PLANTILLA_HTML = """
 <style>
   @page {
     size: A4 landscape;
-    margin: 0;
+    margin: 1cm 1.2cm;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #333;
-    background: #FAFAFA;
+    color: #2C3E50;
   }
 
-  /* ── CLASES DE COLORES DINÁMICOS POR RAMA ── */
-  {% for grupo, col in colores.items() %}
+  /* Aquí genero mis clases de color dinámicas por rama, igual que antes,
+     por si quiero pintar el nombre de un grupo dentro de una celda. */
+  {% for grupo, col in colores_grupos.items() %}
   .bg-{{ grupo|lower|replace(' ','') }} { background: #{{ col.hex }}; color: #{{ col.texto }}; }
-  .bg-light-{{ grupo|lower|replace(' ','') }} { background: #{{ col.bg_ligero }}; border-left: 5px solid #{{ col.hex }}; }
-  .text-{{ grupo|lower|replace(' ','') }} { color: #{{ col.hex }}; }
   {% endfor %}
 
-  /* ── PORTADA ── */
-  .portada {
-    position: relative;
-    width: 29.7cm;
-    height: 21cm;
-    background: #F8F4EC; /* Crema muy suave y estético */
-    overflow: hidden;
+  /* Cabecera de página (título + subtítulo de cada cuadrante) */
+  .pagina {
+    width: 100%;
+    height: 19cm; /* alto útil de la landscape A4 con mis márgenes */
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    page-break-after: always;
   }
-  .forma-azul {
-    position: absolute; left: -5cm; top: -2cm;
-    width: 12cm; height: 18cm;
-    background: #2E5C8A;
-    border-radius: 4cm;
-    transform: rotate(25deg);
-  }
-  .forma-verde {
-    position: absolute; right: -6cm; bottom: -3cm;
-    width: 15cm; height: 14cm;
-    background: #4A8259;
-    border-radius: 3cm;
-    transform: rotate(-15deg);
-  }
-  .portada-contenido {
-    position: relative; z-index: 5; text-align: center;
-    background: rgba(255, 255, 255, 0.6);
-    padding: 2cm 3cm;
-    border-radius: 1cm;
-  }
-  .portada-titulo {
-    font-size: 58pt; font-weight: 800; color: #1C2331;
-    letter-spacing: -1px; margin-bottom: 0.2cm;
-  }
-  .portada-subtitulo {
-    font-size: 18pt; font-weight: 500; color: #555;
-    letter-spacing: 3px; text-transform: uppercase;
-  }
+  .pagina:last-child { page-break-after: auto; }
 
-  /* ── PÁGINAS DE DÍA (DIAPOSITIVAS) ── */
-  .pagina-dia {
-    position: relative;
-    width: 29.7cm; height: 21cm;
-    padding: 1.5cm 2cm;
-    display: flex; flex-direction: column;
-    page-break-before: always;
-    background: #FAFAFA;
-    overflow: hidden;
-  }
-  
-  /* Elementos decorativos de fondo para que parezca una plantilla */
-  .slide-deco-1 {
-    position: absolute; top: -2cm; right: -2cm;
-    width: 6cm; height: 6cm; background: #E9ECEF;
-    border-radius: 50%; opacity: 0.5; z-index: 0;
-  }
-  .slide-deco-2 {
-    position: absolute; bottom: 1cm; left: -1cm;
-    width: 3cm; height: 8cm; background: #F8F4EC;
-    border-radius: 2cm; transform: rotate(45deg); z-index: 0;
-  }
-
-  .dia-header {
-    position: relative; z-index: 1;
-    margin-bottom: 1cm;
-  }
-  .dia-header h1 {
-    font-size: 36pt; font-weight: 800; color: #1C2331;
-    margin-bottom: 0.1cm;
-  }
-  .dia-header .linea-acento {
-    width: 3cm; height: 0.15cm; background: #FF9800;
-    border-radius: 0.1cm;
-  }
-
-  .comidas-container {
-    position: relative; z-index: 1;
-    flex: 1; display: flex; gap: 0.8cm;
-  }
-
-  /* ── COLUMNAS DE COMIDA ── */
-  .comida-col {
-    flex: 1;
-    display: flex; flex-direction: column;
-  }
-  
-  .comida-titulo-flotante {
-    background: #1C2331; color: #FFF;
-    padding: 0.3cm 0.6cm;
-    border-radius: 0.3cm;
-    font-size: 14pt; font-weight: 700;
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 0.5cm;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* Soft shadow simulada */
-  }
-  .comida-titulo-flotante.tono-desayuno { background: #F39C12; }
-  .comida-titulo-flotante.tono-comida   { background: #27AE60; }
-  .comida-titulo-flotante.tono-cena     { background: #2980B9; }
-  /* ── TARJETA LIMPIEZA (Destacada y primera) ── */
-  .tarjeta-limpieza {
-    background: #FFFFFF;
-    border-radius: 0.3cm;
-    padding: 0.5cm;
+  .cabecera-pagina {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
     margin-bottom: 0.4cm;
+    border-bottom: 0.1cm solid #1C2331;
+    padding-bottom: 0.25cm;
+  }
+  .cabecera-pagina h1 {
+    font-size: 22pt;
+    font-weight: 800;
+    color: #1C2331;
+  }
+  .cabecera-pagina .subt {
+    font-size: 10pt;
+    color: #7F8C8D;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Mi tabla de cuadrante: turnos en filas, días en columnas */
+  table.cuadrante {
+    width: 100%;
+    height: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  table.cuadrante th, table.cuadrante td {
+    border: 1px solid #B0BEC5;
+    vertical-align: middle;
+    text-align: center;
+    padding: 0.15cm;
+  }
+
+  /* Esquina superior izquierda vacía */
+  .celda-esquina {
+    background: #1C2331;
+    width: 3.2cm;
+  }
+
+  /* Cabecera de columnas = días del campamento */
+  .cabecera-dia {
+    background: #1C2331;
+    color: #FFFFFF;
+    font-size: 11pt;
+    font-weight: 700;
+  }
+  .cabecera-dia .mes {
+    display: block;
+    font-size: 7pt;
+    font-weight: 400;
+    color: #B0BEC5;
+    text-transform: uppercase;
+  }
+
+  /* Cabecera de filas = turnos, coloreada según mi paleta de turnos */
+  .cabecera-turno {
+    width: 3.2cm;
+    color: #1C2331;
+    font-size: 12pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .cabecera-turno .hora {
+    display: block;
+    font-size: 8pt;
+    font-weight: 500;
+    opacity: 0.75;
+  }
+
+  /* Celda de contenido: limpieza */
+  .celda-limpieza {
+    font-size: 11pt;
+    font-weight: 700;
+  }
+  .celda-limpieza-vacia {
+    color: #CFD8DC;
+    font-size: 9pt;
+    font-style: italic;
+  }
+
+  /* Celda de contenido: comedor, con salto de línea controlado
+     para que la lista de nombres nunca desborde la celda */
+  .celda-comedor {
+    font-size: 9pt;
+    line-height: 1.35;
+    text-align: left;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  .celda-comedor-vacia {
+    color: #CFD8DC;
+    font-size: 9pt;
+    font-style: italic;
     text-align: center;
   }
-  .label-seccion {
-    font-size: 9pt; font-weight: 700; color: #95A5A6;
-    text-transform: uppercase; letter-spacing: 1.5px;
-    margin-bottom: 0.3cm; display: block;
-  }
-  .limpieza-tag {
-    display: inline-block;
-    padding: 0.25cm 0.6cm;
-    font-size: 13pt; font-weight: 800;
-    border-radius: 0.2cm;
-  }
-  .limpieza-vacio {
-    color: #BDC3C7; font-size: 11pt; font-style: italic;
-  }
 
-  /* ── TARJETA RESPONSABLES ── */
-  .tarjeta-responsables {
-    background: #FFFFFF;
-    border-radius: 0.3cm;
-    padding: 0.6cm 0.5cm;
-    flex: 1; /* Ocupa el resto del espacio hacia abajo */
-    border: 1px solid #EEEEEE;
-  }
-  .responsables-grid {
-    display: flex; flex-direction: column; gap: 0.25cm;
-  }
-  .persona-fila {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.2cm 0.3cm;
-    background: #F8F9FA;
-    border-radius: 0.15cm;
-  }
-  .persona-nombre {
-    font-size: 11pt; font-weight: 600; color: #34495E;
-  }
-  .rama-puntito {
-    font-size: 8pt; font-weight: 700; text-transform: uppercase;
-    padding: 0.1cm 0.2cm; border-radius: 0.1cm;
-  }
-
-  .footer-diapositiva {
-    position: absolute; bottom: 1cm; right: 2cm;
-    font-size: 8pt; color: #AAB7B8;
+  .footer-pagina {
+    margin-top: 0.3cm;
+    text-align: right;
+    font-size: 7pt;
+    color: #AAB7B8;
   }
 </style>
 </head>
 <body>
 
-<section class="portada">
-  <div class="forma-azul"></div>
-  <div class="forma-verde"></div>
-  <div class="portada-contenido">
-    <div class="portada-titulo">Organización Scout</div>
-    <div class="portada-subtitulo">Campamento Verano {{ anio }}</div>
+<!-- PÁGINA 1 · CUADRANTE DE LIMPIEZA -->
+<section class="pagina">
+  <div class="cabecera-pagina">
+    <h1>Cuadrante de Limpieza</h1>
+    <span class="subt">Campamento Verano {{ anio }}</span>
   </div>
+
+  <table class="cuadrante">
+    <thead>
+      <tr>
+        <th class="celda-esquina"></th>
+        {% for dia in dias %}
+        <th class="cabecera-dia">{{ dia }}<span class="mes">jul</span></th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for turno in turnos %}
+      <tr>
+        <th class="cabecera-turno" style="background:#{{ colores_turnos[turno] }};">
+          {{ turno }}<span class="hora">{{ horas_turno[turno] }}</span>
+        </th>
+        {% for dia in dias %}
+        {% set grupo = matriz_limpieza[turno][dia] %}
+        <td>
+          {% if grupo %}
+          <div class="celda-limpieza bg-{{ grupo|lower|replace(' ','') }}">{{ grupo }}</div>
+          {% else %}
+          <span class="celda-limpieza-vacia">—</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer-pagina">Generado el {{ fecha }}</div>
 </section>
 
-{% for dia in dias %}
-{% set comidas_del_dia = turnos_por_dia[dia] %}
-<section class="pagina-dia">
-  <div class="slide-deco-1"></div>
-  <div class="slide-deco-2"></div>
-
-  <div class="dia-header">
-    <h1>Día {{ dia }} de Julio</h1>
-    <div class="linea-acento"></div>
+<!-- PÁGINA 2 · CUADRANTE DE COMEDOR -->
+<section class="pagina">
+  <div class="cabecera-pagina">
+    <h1>Cuadrante de Comedor</h1>
+    <span class="subt">Campamento Verano {{ anio }}</span>
   </div>
 
-  <div class="comidas-container">
-    {% for entrada in comidas_del_dia %}
-    <div class="comida-col">
-      
-      <div class="comida-titulo-flotante tono-{{ entrada.turno | lower }}">
-        <span>{{ entrada.turno }}</span>
-      </div>
+  <table class="cuadrante">
+    <thead>
+      <tr>
+        <th class="celda-esquina"></th>
+        {% for dia in dias %}
+        <th class="cabecera-dia">{{ dia }}<span class="mes">jul</span></th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for turno in turnos %}
+      <tr>
+        <th class="cabecera-turno" style="background:#{{ colores_turnos[turno] }};">
+          {{ turno }}<span class="hora">{{ horas_turno[turno] }}</span>
+        </th>
+        {% for dia in dias %}
+        {% set responsables = matriz_comedor[turno][dia] %}
+        <td>
+          {% if responsables %}
+          <div class="celda-comedor">{{ responsables }}</div>
+          {% else %}
+          <span class="celda-comedor-vacia">—</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-      {% if entrada.grupo_limpieza %}
-      <div class="tarjeta-limpieza bg-light-{{ entrada.grupo_limpieza | lower | replace(' ','') }}">
-        <span class="label-seccion">Grupo de Limpieza</span>
-        <div class="limpieza-tag bg-{{ entrada.grupo_limpieza | lower | replace(' ','') }}">
-          {{ entrada.grupo_limpieza }}
-        </div>
-      </div>
-      {% else %}
-      <div class="tarjeta-limpieza" style="border: 1px dashed #E0E0E0;">
-        <span class="label-seccion">Grupo de Limpieza</span>
-        <div class="limpieza-vacio">Sin asignar</div>
-      </div>
-      {% endif %}
-
-      <div class="tarjeta-responsables">
-        <span class="label-seccion">Sirven el comedor</span>
-        <div class="responsables-grid">
-          {% for persona in entrada.personas %}
-          <div class="persona-fila">
-            <span class="persona-nombre">{{ persona.nombre }}</span>
-            <span class="rama-puntito bg-{{ persona.grupo | lower | replace(' ','') }}">{{ persona.grupo }}</span>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-
-    </div>
-    {% endfor %}
-  </div>
-
+  <div class="footer-pagina">Generado el {{ fecha }}</div>
 </section>
-{% endfor %}
 
 </body>
 </html>
@@ -440,29 +420,35 @@ def generar_pdf(asignaciones: List[Dict], limpieza: Optional[List[Dict]] = None,
     df = pd.DataFrame(asignaciones)
     limpieza_dict = _mapa_limpieza(limpieza)
 
-    turnos_por_dia: Dict[int, list] = {}
-    for dia in DIAS:
-        entradas = []
-        for turno in TURNOS:
-            subset = df[(df["Dia"] == dia) & (df["Turno"] == turno)]
+    # Horas de referencia por turno, para mostrarlas junto al nombre en la cabecera de fila.
+    horas_turno = {"Desayuno": "08:30", "Comida": "13:30", "Cena": "20:30"}
+
+    # Aquí armo mi matriz de limpieza: turno -> dia -> grupo (o None si ese turno
+    # no tiene servicio ese día, p.ej. la comida del 20 o la cena del 30).
+    matriz_limpieza: Dict[str, Dict[int, Optional[str]]] = {
+        turno: {dia: limpieza_dict.get((dia, turno)) for dia in DIAS}
+        for turno in TURNOS
+    }
+
+    # Y aquí armo mi matriz de comedor: turno -> dia -> string con los nombres
+    # de los responsables ya unidos por comas, lista para pintar en la celda.
+    matriz_comedor: Dict[str, Dict[int, Optional[str]]] = {turno: {} for turno in TURNOS}
+    for turno in TURNOS:
+        for dia in DIAS:
+            subset = df[(df["Dia"] == dia) & (df["Turno"] == turno)] if not df.empty else df
             if subset.empty:
-                continue
-            personas = [
-                {"nombre": r["Nombre"], "grupo": r["Grupo"]}
-                for _, r in subset.iterrows()
-            ]
-            entradas.append({
-                "turno": turno,
-                "personas": personas,
-                "grupo_limpieza": limpieza_dict.get((dia, turno)),
-            })
-        if entradas:
-            turnos_por_dia[dia] = entradas
+                matriz_comedor[turno][dia] = None
+            else:
+                matriz_comedor[turno][dia] = ", ".join(subset["Nombre"].tolist())
 
     html_renderizado = Template(_PLANTILLA_HTML).render(
-        dias=list(turnos_por_dia.keys()),
-        turnos_por_dia=turnos_por_dia,
-        colores=COLORES_GRUPOS,
+        dias=DIAS,
+        turnos=TURNOS,
+        horas_turno=horas_turno,
+        matriz_limpieza=matriz_limpieza,
+        matriz_comedor=matriz_comedor,
+        colores_grupos=COLORES_GRUPOS,
+        colores_turnos=COLORES_TURNOS,
         anio=anio,
         fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
     )
