@@ -1,0 +1,17 @@
+# requirements.txt
+
+# Framework web para mi API
+Flask
+
+# Procesamiento de datos y exportación a Excel
+pandas
+openpyxl
+
+minizinc
+
+# PDF
+WeasyPrint
+Jinja2
+
+# Servidor WSGI
+gunicorn

@@ -10,8 +10,8 @@ from pathlib import Path
 
 from flask import Flask, request, jsonify, send_file, render_template, abort
 
-from motor_optimizacion import cargar_responsables, plan_limpieza, resolver_con_minizinc
-from generador_informes import generar_excel, generar_pdf
+from optimization import cargar_responsables, plan_limpieza, resolver_con_minizinc
+from report_generator import generar_excel, generar_pdf
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuración
@@ -106,7 +106,7 @@ atexit.register(_limpiar_sesiones_expiradas)
 @app.route("/")
 def index():
     """Sirve el frontend de la SPA."""
-    return render_template("scout_turnos_frontend.html")
+    return render_template("index.html")
 
 
 @app.route("/generar_horario", methods=["POST"])
