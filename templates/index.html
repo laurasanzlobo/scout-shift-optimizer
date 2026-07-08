@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turnos Comedor · Campamento 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='scout_turnos.css') }}">
+</head>
+<body>
+
+<div id="app">
+  <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">Turnos Comedor Campamento Scout 2026</h1>
+
+  <header class="brand">
+    <div class="brand-mark"><i class="ti ti-tent" aria-hidden="true"></i></div>
+    <div>
+      <div class="brand-name">Turnos Comedor</div>
+      <div class="brand-tag">Campamento Verano 2026</div>
+    </div>
+  </header>
+
+  <div id="screen-upload" class="screen active">
+    <p class="hero-eyebrow">Solver de optimización</p>
+    <h2 class="hero-title">Texto de prueba,<br><em>scouts.</em></h2>
+    <p class="hero-sub">Sube el CSV de responsables y el motor asigna los turnos de forma equitativa, respetando disponibilidades y restricciones de teatro.</p>
+
+    <div class="dropzone" id="dropzone">
+      <input type="file" accept=".csv" id="file-input" aria-label="Seleccionar archivo CSV">
+      <div class="dropzone-icon-wrap"><i class="ti ti-file-upload" aria-hidden="true"></i></div>
+      <p class="dropzone-label">Arrastra tu CSV aquí</p>
+      <p class="dropzone-hint">o haz clic para seleccionarlo</p>
+    </div>
+
+    <div id="file-selected-row" style="display:none" class="file-pill">
+      <i class="ti ti-file-spreadsheet file-pill-icon" aria-hidden="true"></i>
+      <span class="file-name" id="file-name-label"></span>
+      <button class="file-clear" id="btn-clear" aria-label="Quitar archivo"><i class="ti ti-x"></i></button>
+    </div>
+
+    <div id="error-area"></div>
+
+    <button class="btn-primary" id="btn-generar" disabled>
+      <i class="ti ti-cpu" aria-hidden="true"></i> Generar horario
+    </button>
+
+    <div class="fmt-hint">
+      <p class="fmt-hint-title"><i class="ti ti-info-circle" aria-hidden="true"></i> Columnas del CSV</p>
+      <div class="fmt-cols">
+        <code>Nombre</code>
+        <code>Grupo</code>
+        <code>TeatroComida</code>
+        <code>TeatroCena</code>
+        <code>Disponible</code>
+      </div>
+      <p class="fmt-note">Días separados por <code>;</code> — ej: <code>20; 23; 25</code>. Vacío = disponible todos los días.</p>
+    </div>
+  </div>
+
+  <div id="screen-loading" class="screen">
+    <div class="loading-wrap">
+
+      <svg class="campfire-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fogata animada">
+        <circle class="ember" cx="38" cy="38" r="1.5" fill="#FFAD0D"/>
+        <circle class="ember" cx="45" cy="35" r="1" fill="#FF8C00"/>
+        <circle class="ember" cx="52" cy="38" r="1.5" fill="#E6B800"/>
+
+        <ellipse class="flame flame-5" cx="45" cy="46" rx="7" ry="18" fill="#E6B800" opacity="0.55"/>
+        <ellipse class="flame flame-4" cx="36" cy="50" rx="6" ry="14" fill="#1A6B30" opacity="0.6"/>
+        <ellipse class="flame flame-3" cx="54" cy="50" rx="6" ry="14" fill="#C62828" opacity="0.6"/>
+        <ellipse class="flame flame-2" cx="40" cy="52" rx="7" ry="16" fill="#2EA043" opacity="0.8"/>
+        <ellipse class="flame flame-1" cx="50" cy="52" rx="7" ry="16" fill="#FF8C00" opacity="0.85"/>
+        <ellipse class="flame flame-3" cx="45" cy="55" rx="6" ry="12" fill="#FFAD0D"/>
+        <ellipse class="flame flame-1" cx="45" cy="57" rx="3.5" ry="7" fill="#FFF0A0"/>
+
+        <rect x="22" y="64" width="46" height="7" rx="3.5" fill="#5D3A1A"/>
+        <rect x="28" y="60" width="8" height="10" rx="3" fill="#6D4520" transform="rotate(-30 28 60)"/>
+        <rect x="58" y="60" width="8" height="10" rx="3" fill="#6D4520" transform="rotate(30 58 60)"/>
+        <ellipse cx="45" cy="73" rx="22" ry="5" fill="#FFAD0D" opacity="0.12"/>
+      </svg>
+
+      <p class="loading-title">Optimizando turnos…</p>
+      <p class="loading-sub">El solver evalúa todas las combinaciones posibles.</p>
+
+      <div class="steps-list">
+        <div class="lstep active" id="step1">
+          <span class="lstep-icon"><i class="ti ti-file-import"></i></span>
+          <span class="lstep-text">Parseando responsables</span>
+        </div>
+        <div class="lstep" id="step2">
+          <span class="lstep-icon"><i class="ti ti-calendar-event"></i></span>
+          <span class="lstep-text">Calculando cuotas y limpieza</span>
+        </div>
+        <div class="lstep" id="step3">
+          <span class="lstep-icon"><i class="ti ti-cpu"></i></span>
+          <span class="lstep-text">Ejecutando Gecode</span>
+        </div>
+        <div class="lstep" id="step4">
+          <span class="lstep-icon"><i class="ti ti-table"></i></span>
+          <span class="lstep-text">Generando resultados</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-results" class="screen">
+
+    <div class="results-topbar">
+      <div>
+        <div class="results-heading">Horario generado</div>
+        <div class="results-meta" id="res-meta"></div>
+      </div>
+      <div class="dl-group">
+        <a href="#" class="btn-dl excel" id="btn-excel" aria-label="Descargar Excel">
+          <i class="ti ti-table-export" aria-hidden="true"></i> Excel
+        </a>
+        <a href="#" class="btn-dl pdf" id="btn-pdf" aria-label="Descargar PDF">
+          <i class="ti ti-file-type-pdf" aria-hidden="true"></i> PDF
+        </a>
+      </div>
+    </div>
+
+    <div class="stats-grid" id="stats-row"></div>
+
+    <div class="rama-legend" id="rama-legend"></div>
+
+    <div class="filter-strip" id="filter-row">
+      <button class="chip active" data-filter="all">Todos los turnos</button>
+      <button class="chip" data-filter="Desayuno">
+        <span class="chip-dot" style="background:var(--c-desayuno)"></span>Desayuno
+      </button>
+      <button class="chip" data-filter="Comida">
+        <span class="chip-dot" style="background:var(--c-comida)"></span>Comida
+      </button>
+      <button class="chip" data-filter="Cena">
+        <span class="chip-dot" style="background:var(--c-cena)"></span>Cena
+      </button>
+    </div>
+
+    <div class="turnos-list" id="turnos-list"></div>
+
+    <button class="btn-ghost" id="btn-nuevo">
+      <i class="ti ti-refresh" aria-hidden="true"></i> Subir nuevo CSV
+    </button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════
+   DATA & CONFIG
+════════════════════════════ */
+const COLORES = {
+  Castores: { bg: '#FF8C00', t: '#fff' },
+  Lobatos:  { bg: '#E6B800', t: '#1a1400' },
+  Ranger1:  { bg: '#2EA043', t: '#fff' },
+  Ranger2:  { bg: '#1A6B30', t: '#fff' },
+  Pioneros: { bg: '#C62828', t: '#fff' },
+};
+const TURNO_ACCENT = {
+  Desayuno: '#FFAD0D',
+  Comida:   '#2EA043',
+  Cena:     '#4A90D9',
+};
+const TURNO_TIME = {
+  Desayuno: '08:30',
+  Comida:   '13:30',
+  Cena:     '20:30',
+};
+
+let selectedFile = null;
+let asignaciones = [];
+let limpiezaPorTurno = [];
+let sessionId    = null;
+let activeFilter = 'all';
+
+/* ════════════════════════════
+   SCREEN MANAGEMENT
+════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ════════════════════════════
+   FILE HANDLING
+════════════════════════════ */
+const dropzone        = document.getElementById('dropzone');
+const fileInput       = document.getElementById('file-input');
+const fileSelectedRow = document.getElementById('file-selected-row');
+const fileNameLabel   = document.getElementById('file-name-label');
+const btnGenerar      = document.getElementById('btn-generar');
+const errorArea       = document.getElementById('error-area');
+
+function setFile(f) {
+  selectedFile = f;
+  if (f) {
+    fileNameLabel.textContent = f.name;
+    fileSelectedRow.style.display = 'flex';
+    btnGenerar.disabled = false;
+  } else {
+    fileSelectedRow.style.display = 'none';
+    btnGenerar.disabled = true;
+  }
+  errorArea.innerHTML = '';
+}
+
+fileInput.addEventListener('change', e => setFile(e.target.files[0] || null));
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  fileInput.value = '';
+  setFile(null);
+});
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', e => { if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('drag-over'); });
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.csv')) setFile(f);
+});
+
+/* ════════════════════════════
+   LOADING STEPS ANIMATION
+════════════════════════════ */
+function animateSteps() {
+  const steps = ['step1', 'step2', 'step3', 'step4'];
+  let i = 0;
+  const tick = () => {
+    if (i > 0) {
+      const prev = document.getElementById(steps[i - 1]);
+      prev.classList.remove('active');
+      prev.classList.add('done');
+      prev.querySelector('.lstep-icon').innerHTML = '<i class="ti ti-circle-check" style="color:#2EA043"></i>';
+    }
+    if (i < steps.length) {
+      document.getElementById(steps[i]).classList.add('active');
+      i++;
+      setTimeout(tick, 850 + Math.random() * 500);
+    }
+  };
+  tick();
+}
+
+function getGrupoLimpieza(dia, turno) {
+  const entrada = limpiezaPorTurno.find(l => l.Dia === dia && l.Turno === turno);
+  return entrada ? entrada.GrupoLimpieza : null;
+}
+
+/* ════════════════════════════
+   FETCH & GENERATE
+════════════════════════════ */
+btnGenerar.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  errorArea.innerHTML = '';
+
+  showScreen('screen-loading');
+  animateSteps();
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+
+  try {
+    const res  = await fetch('/generar_horario', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (!res.ok || data.status !== 'exito') {
+      showScreen('screen-upload');
+      errorArea.innerHTML = `
+        <div class="error-box">
+          <i class="ti ti-alert-circle"></i>
+          <span>${data.mensaje || 'Error desconocido del servidor.'}</span>
+        </div>`;
+      return;
+    }
+
+    asignaciones     = data.asignaciones;
+    limpiezaPorTurno = data.limpieza || [];
+    sessionId        = data.session_id;
+    document.getElementById('btn-excel').href = `/descargar/excel/${sessionId}`;
+    document.getElementById('btn-pdf').href   = `/descargar/pdf/${sessionId}`;
+
+    renderResults();
+    showScreen('screen-results');
+
+  } catch {
+    showScreen('screen-upload');
+    errorArea.innerHTML = `
+      <div class="error-box">
+        <i class="ti ti-wifi-off"></i>
+        <span>No se pudo conectar con el servidor. ¿Está Flask en marcha?</span>
+      </div>`;
+  }
+});
+
+/* ════════════════════════════
+   RENDER RESULTS
+════════════════════════════ */
+function renderResults() {
+  const personas = [...new Set(asignaciones.map(a => a.Nombre))];
+  const dias     = [...new Set(asignaciones.map(a => a.Dia))].sort((a, b) => a - b);
+  const total    = asignaciones.length;
+
+  document.getElementById('res-meta').textContent =
+    `${personas.length} responsables · ${dias.length} días · ${total} turnos`;
+
+  // Stats
+  const dobletes = dias.filter(d => {
+    const dp = asignaciones.filter(a => a.Dia === d);
+    return personas.some(p =>
+      dp.some(a => a.Nombre === p && a.Turno === 'Comida') &&
+      dp.some(a => a.Nombre === p && a.Turno === 'Cena')
+    );
+  }).length;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num">${personas.length}</div>
+      <div class="stat-label">Responsables</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${total}</div>
+      <div class="stat-label">Turnos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${dobletes}</div>
+      <div class="stat-label">Dobletes</div>
+    </div>`;
+
+  // Trigger bar animation
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.stat-card').forEach((c, i) => {
+      setTimeout(() => c.classList.add('visible'), i * 80);
+    });
+  });
+
+  // Rama legend
+  const gruposPresentes = [...new Set(asignaciones.map(a => a.Grupo))].sort();
+  document.getElementById('rama-legend').innerHTML =
+    gruposPresentes.map(g => {
+      const c = COLORES[g] || { bg: '#607D8B', t: '#fff' };
+      return `<span class="rama-pill" style="background:${c.bg};color:${c.t}">${g}</span>`;
+    }).join('');
+
+  renderTurnos();
+}
+
+/* ════════════════════════════
+   RENDER TURNO CARDS
+════════════════════════════ */
+function renderTurnos() {
+  const filtered = activeFilter === 'all'
+    ? asignaciones
+    : asignaciones.filter(a => a.Turno === activeFilter);
+
+  const dias   = [...new Set(filtered.map(a => a.Dia))].sort((a, b) => a - b);
+  const turnos = ['Desayuno', 'Comida', 'Cena'];
+  let html = '';
+  let delay = 0;
+
+  for (const d of dias) {
+    for (const t of turnos) {
+      const grupo = filtered.filter(a => a.Dia === d && a.Turno === t);
+      if (!grupo.length) continue;
+
+      const accentColor = TURNO_ACCENT[t];
+      const badges = grupo.map(a => {
+        const c = COLORES[a.Grupo] || { bg: '#607D8B', t: '#fff' };
+        return `<span class="badge" style="background:${c.bg};color:${c.t}">${a.Nombre}</span>`;
+      }).join('');
+
+      const grupoLimpieza = getGrupoLimpieza(d, t);
+      const limpiezaHtml = grupoLimpieza
+        ? (() => {
+            const cl = COLORES[grupoLimpieza] || { bg: '#607D8B', t: '#fff' };
+            return `
+              <div class="tc-limpieza-label"><i class="ti ti-broom"></i> Limpieza</div>
+              <span class="tc-limpieza-badge" style="background:${cl.bg};color:${cl.t}">${grupoLimpieza}</span>`;
+          })()
+        : `<div class="tc-limpieza-label"><i class="ti ti-broom"></i> Limpieza</div>
+           <span class="tc-limpieza-vacio">—</span>`;
+
+      html += `
+        <div class="turno-card" style="animation-delay:${delay}ms">
+          <div class="tc-accent" style="background:${accentColor}"></div>
+          <div class="tc-day">
+            <div class="tc-day-num">${d}</div>
+            <div class="tc-day-month">jul</div>
+          </div>
+          <div class="tc-turno">
+            <div class="tc-turno-name">${t}</div>
+            <div class="tc-turno-time">${TURNO_TIME[t]}</div>
+          </div>
+          <div class="tc-personas">${badges}</div>
+          <div class="tc-limpieza">${limpiezaHtml}</div>
+        </div>`;
+      delay += 25;
+    }
+  }
+
+  document.getElementById('turnos-list').innerHTML = html ||
+    `<div class="empty-state"><i class="ti ti-calendar-off"></i>Sin turnos para este filtro.</div>`;
+}
+
+/* ════════════════════════════
+   FILTER CHIPS
+════════════════════════════ */
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    renderTurnos();
+  });
+});
+
+/* ════════════════════════════
+   RESET
+════════════════════════════ */
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  fileInput.value = '';
+  setFile(null);
+  asignaciones     = [];
+  limpiezaPorTurno = [];
+  sessionId        = null;
+  document.getElementById('btn-excel').href = '#';
+  document.getElementById('btn-pdf').href   = '#';
+  activeFilter = 'all';
+  document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  document.querySelector('.chip[data-filter=all]').classList.add('active');
+  showScreen('screen-upload');
+});
+</script>
+</body>
+</html>
