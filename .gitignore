@@ -1,0 +1,15 @@
+# Entornos virtuales
+venv/
+env/
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+
+# Archivos temporales de la aplicación
+tmp_sessions/
+*.xlsx
+*.pdf
+
+# Configuración del sistema operativo
+.DS_Store
