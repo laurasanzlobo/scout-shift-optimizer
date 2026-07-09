@@ -32,6 +32,7 @@ COLORES_TURNOS = {
 
 DIAS = [d for d in range(15, 31) if d not in {17, 18, 19}]
 TURNOS = ["Desayuno", "Comida", "Cena"]
+GRUPO_CASTORES_RUTAS = "CastoresRutas"
 
 
 def _thin_border():
@@ -45,6 +46,19 @@ def _mapa_limpieza(limpieza: Optional[List[Dict]]) -> Dict:
         (item["Dia"], item["Turno"]): item["GrupoLimpieza"]
         for item in limpieza
     }
+
+
+def _grupos_limpieza_para_mostrar(grupo: Optional[str]) -> List[str]:
+  if not grupo:
+    return []
+  if grupo in {GRUPO_CASTORES_RUTAS}:
+    return ["Castores", "Rutas"]
+  return [grupo]
+
+
+def _texto_limpieza_para_mostrar(grupo: Optional[str]) -> str:
+  grupos = _grupos_limpieza_para_mostrar(grupo)
+  return " / ".join(grupos) if grupos else "—"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EXCEL (Se mantiene idéntico)
@@ -98,7 +112,8 @@ def _hoja_por_dia(wb: Workbook, df: pd.DataFrame, limpieza_dict: Dict):
 
             nombres = ", ".join(subset["Nombre"].tolist())
             grupos = ", ".join(subset["Grupo"].tolist())
-            grupo_limpieza = limpieza_dict.get((dia, turno), "—")
+            grupo_limpieza = limpieza_dict.get((dia, turno))
+            grupo_limpieza_texto = _texto_limpieza_para_mostrar(grupo_limpieza)
             color_fondo = COLORES_TURNOS.get(turno, "FFFFFF")
             colores_limpieza = COLORES_GRUPOS.get(grupo_limpieza, {"hex": "ECEFF1", "texto": "333333"})
 
@@ -110,7 +125,7 @@ def _hoja_por_dia(wb: Workbook, df: pd.DataFrame, limpieza_dict: Dict):
                 cell.font = Font(name="Arial", size=9)
                 cell.alignment = Alignment(vertical="center", wrap_text=True)
 
-            celda_limpieza = ws.cell(row=fila, column=5, value=grupo_limpieza)
+            celda_limpieza = ws.cell(row=fila, column=5, value=grupo_limpieza_texto)
             celda_limpieza.fill = PatternFill("solid", start_color=colores_limpieza["hex"])
             celda_limpieza.font = Font(name="Arial", size=9, bold=True, color=colores_limpieza["texto"])
             celda_limpieza.border = _thin_border()
@@ -197,170 +212,156 @@ _PLANTILLA_HTML = """
 <head>
 <meta charset="UTF-8">
 <style>
+  /* Configuro el documento en A4 horizontal aprovechando bien los márgenes */
   @page {
     size: A4 landscape;
-    margin: 1cm 1.2cm;
+    margin: 1cm;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #2C3E50;
+    color: #333;
+    font-size: 10pt;
   }
 
-  /* Aquí genero mis clases de color dinámicas por rama, igual que antes,
-     por si quiero pintar el nombre de un grupo dentro de una celda. */
-  {% for grupo, col in colores_grupos.items() %}
+  /* ── COLORES DINÁMICOS POR RAMA ── */
+  {% for grupo, col in colores.items() %}
   .bg-{{ grupo|lower|replace(' ','') }} { background: #{{ col.hex }}; color: #{{ col.texto }}; }
   {% endfor %}
 
-  /* Cabecera de página (título + subtítulo de cada cuadrante) */
+  /* ── CONTENEDORES Y SALTOS DE PÁGINA ── */
+  /* Separo las dos tablas en dos contenedores distintos. 
+     Solo le aplico el salto de página al contenedor del comedor, 
+     así evito que la primera página se quede en blanco. */
   .pagina {
     width: 100%;
-    height: 19cm; /* alto útil de la landscape A4 con mis márgenes */
+    height: 100%;
     display: flex;
     flex-direction: column;
-    page-break-after: always;
+    justify-content: center;
   }
-  .pagina:last-child { page-break-after: auto; }
+  .salto-pagina {
+    page-break-before: always;
+  }
 
-  .cabecera-pagina {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 0.4cm;
-    border-bottom: 0.1cm solid #1C2331;
-    padding-bottom: 0.25cm;
+  /* ── CABECERA ── */
+  .header {
+    text-align: center;
+    margin-bottom: 0.6cm;
   }
-  .cabecera-pagina h1 {
+  .header h1 {
     font-size: 22pt;
     font-weight: 800;
     color: #1C2331;
-  }
-  .cabecera-pagina .subt {
-    font-size: 10pt;
-    color: #7F8C8D;
     text-transform: uppercase;
     letter-spacing: 1px;
+    margin-bottom: 0.1cm;
   }
-
-  /* Mi tabla de cuadrante: turnos en filas, días en columnas */
-  table.cuadrante {
-    width: 100%;
-    height: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-  table.cuadrante th, table.cuadrante td {
-    border: 1px solid #B0BEC5;
-    vertical-align: middle;
-    text-align: center;
-    padding: 0.15cm;
-  }
-
-  /* Esquina superior izquierda vacía */
-  .celda-esquina {
-    background: #1C2331;
-    width: 3.2cm;
-  }
-
-  /* Cabecera de columnas = días del campamento */
-  .cabecera-dia {
-    background: #1C2331;
-    color: #FFFFFF;
-    font-size: 11pt;
-    font-weight: 700;
-  }
-  .cabecera-dia .mes {
-    display: block;
-    font-size: 7pt;
-    font-weight: 400;
-    color: #B0BEC5;
-    text-transform: uppercase;
-  }
-
-  /* Cabecera de filas = turnos, coloreada según mi paleta de turnos */
-  .cabecera-turno {
-    width: 3.2cm;
-    color: #1C2331;
+  .header p {
     font-size: 12pt;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #7F8C8D;
   }
-  .cabecera-turno .hora {
-    display: block;
-    font-size: 8pt;
-    font-weight: 500;
-    opacity: 0.75;
-  }
-
-  /* Celda de contenido: limpieza */
-  .celda-limpieza {
-    font-size: 11pt;
-    font-weight: 700;
-  }
-  .celda-limpieza-vacia {
-    color: #CFD8DC;
-    font-size: 9pt;
-    font-style: italic;
+  
+  .section-title {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #2C3E50;
+    margin-bottom: 0.4cm;
+    border-bottom: 2px solid #FF9800;
+    display: inline-block;
+    padding-bottom: 0.1cm;
   }
 
-  /* Celda de contenido: comedor, con salto de línea controlado
-     para que la lista de nombres nunca desborde la celda */
-  .celda-comedor {
-    font-size: 9pt;
-    line-height: 1.35;
-    text-align: left;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
+  /* ── TABLAS GLOBALES ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    /* Esto es vital: fuerza a que todas las columnas de los días midan exactamente lo mismo 
+       y el texto no desborde ni deforme la celda. */
+    table-layout: fixed; 
   }
-  .celda-comedor-vacia {
-    color: #CFD8DC;
-    font-size: 9pt;
-    font-style: italic;
+  th, td {
+    border: 1px solid #BDC3C7;
     text-align: center;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+  th {
+    background-color: #34495E;
+    color: white;
+    font-size: 10pt;
+    padding: 0.25cm 0;
+  }
+  .th-turno {
+    width: 8%; /* Hago la columna de los turnos un poco más estrecha que las de los días */
+    background-color: #2C3E50;
+    color: white;
+    font-weight: bold;
   }
 
-  .footer-pagina {
-    margin-top: 0.3cm;
-    text-align: right;
-    font-size: 7pt;
-    color: #AAB7B8;
+  /* ── TABLA LIMPIEZA (PÁGINA 1) ── */
+  .td-limpieza {
+    height: 1.8cm; 
+    padding: 0.1cm;
+  }
+  /* He reducido drásticamente los márgenes y tamaños de fuente para que 
+     quepan perfectamente Castores y Rutas juntos sin desbordar. */
+  .badge-limpieza {
+    display: inline-block;
+    padding: 0.15cm 0.25cm;
+    font-size: 8pt;
+    font-weight: 700;
+    border-radius: 0.15cm;
+    margin: 0.05cm 0;
+    white-space: nowrap; /* Evito que el nombre de un grupo se parta en dos líneas */
+  }
+  .vacio {
+    color: #95A5A6;
+    font-size: 8pt;
+  }
+
+  /* ── TABLA COMEDOR (PÁGINA 2) ── */
+  .td-comedor {
+    height: 4.5cm; /* Le doy más altura porque es una lista de personas */
+    padding: 0.2cm;
+    font-size: 10pt;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.4;
   }
 </style>
 </head>
 <body>
 
-<!-- PÁGINA 1 · CUADRANTE DE LIMPIEZA -->
-<section class="pagina">
-  <div class="cabecera-pagina">
-    <h1>Cuadrante de Limpieza</h1>
-    <span class="subt">Campamento Verano {{ anio }}</span>
+<div class="pagina">
+  <div class="header">
+    <h1>Cuadrantes de Campamento</h1>
+    <p>Julio 2026</p>
   </div>
-
-  <table class="cuadrante">
+  <div class="section-title">Equipos de Limpieza</div>
+  
+  <table>
     <thead>
       <tr>
-        <th class="celda-esquina"></th>
+        <th class="th-turno">Turno</th>
         {% for dia in dias %}
-        <th class="cabecera-dia">{{ dia }}<span class="mes">jul</span></th>
+        <th>Día {{ dia }}</th>
         {% endfor %}
       </tr>
     </thead>
     <tbody>
       {% for turno in turnos %}
       <tr>
-        <th class="cabecera-turno" style="background:#{{ colores_turnos[turno] }};">
-          {{ turno }}<span class="hora">{{ horas_turno[turno] }}</span>
-        </th>
+        <td class="th-turno">{{ turno }}</td>
         {% for dia in dias %}
-        {% set grupo = matriz_limpieza[turno][dia] %}
-        <td>
-          {% if grupo %}
-          <div class="celda-limpieza bg-{{ grupo|lower|replace(' ','') }}">{{ grupo }}</div>
+        <td class="td-limpieza">
+          {% set grupos = matriz_limpieza[turno][dia] %}
+          {% if grupos %}
+            {% for g in grupos %}
+              <span class="badge-limpieza bg-{{ g|lower|replace(' ','') }}">{{ g }}</span>
+            {% endfor %}
           {% else %}
-          <span class="celda-limpieza-vacia">—</span>
+            <span class="vacio">—</span>
           {% endif %}
         </td>
         {% endfor %}
@@ -368,39 +369,35 @@ _PLANTILLA_HTML = """
       {% endfor %}
     </tbody>
   </table>
+</div>
 
-  <div class="footer-pagina">Generado el {{ fecha }}</div>
-</section>
-
-<!-- PÁGINA 2 · CUADRANTE DE COMEDOR -->
-<section class="pagina">
-  <div class="cabecera-pagina">
-    <h1>Cuadrante de Comedor</h1>
-    <span class="subt">Campamento Verano {{ anio }}</span>
+<div class="pagina salto-pagina">
+  <div class="header">
+    <h1>Cuadrantes de Campamento</h1>
+    <p>Julio 2026</p>
   </div>
-
-  <table class="cuadrante">
+  <div class="section-title">Servicio de Comedor</div>
+  
+  <table>
     <thead>
       <tr>
-        <th class="celda-esquina"></th>
+        <th class="th-turno">Turno</th>
         {% for dia in dias %}
-        <th class="cabecera-dia">{{ dia }}<span class="mes">jul</span></th>
+        <th>Día {{ dia }}</th>
         {% endfor %}
       </tr>
     </thead>
     <tbody>
       {% for turno in turnos %}
       <tr>
-        <th class="cabecera-turno" style="background:#{{ colores_turnos[turno] }};">
-          {{ turno }}<span class="hora">{{ horas_turno[turno] }}</span>
-        </th>
+        <td class="th-turno">{{ turno }}</td>
         {% for dia in dias %}
-        {% set responsables = matriz_comedor[turno][dia] %}
-        <td>
-          {% if responsables %}
-          <div class="celda-comedor">{{ responsables }}</div>
+        <td class="td-comedor">
+          {% set nombres = matriz_comedor[turno][dia] %}
+          {% if nombres %}
+            {{ nombres }}
           {% else %}
-          <span class="celda-comedor-vacia">—</span>
+            <div style="text-align:center; color:#95A5A6; margin-top:0.5cm;">—</div>
           {% endif %}
         </td>
         {% endfor %}
@@ -408,9 +405,7 @@ _PLANTILLA_HTML = """
       {% endfor %}
     </tbody>
   </table>
-
-  <div class="footer-pagina">Generado el {{ fecha }}</div>
-</section>
+</div>
 
 </body>
 </html>
@@ -425,8 +420,8 @@ def generar_pdf(asignaciones: List[Dict], limpieza: Optional[List[Dict]] = None,
 
     # Aquí armo mi matriz de limpieza: turno -> dia -> grupo (o None si ese turno
     # no tiene servicio ese día, p.ej. la comida del 20 o la cena del 30).
-    matriz_limpieza: Dict[str, Dict[int, Optional[str]]] = {
-        turno: {dia: limpieza_dict.get((dia, turno)) for dia in DIAS}
+    matriz_limpieza: Dict[str, Dict[int, List[str]]] = {
+      turno: {dia: _grupos_limpieza_para_mostrar(limpieza_dict.get((dia, turno))) for dia in DIAS}
         for turno in TURNOS
     }
 
@@ -441,16 +436,14 @@ def generar_pdf(asignaciones: List[Dict], limpieza: Optional[List[Dict]] = None,
             else:
                 matriz_comedor[turno][dia] = ", ".join(subset["Nombre"].tolist())
 
+    # Inyecto todas las matrices y diccionarios, incluyendo la paleta de colores
     html_renderizado = Template(_PLANTILLA_HTML).render(
         dias=DIAS,
         turnos=TURNOS,
         horas_turno=horas_turno,
         matriz_limpieza=matriz_limpieza,
         matriz_comedor=matriz_comedor,
-        colores_grupos=COLORES_GRUPOS,
-        colores_turnos=COLORES_TURNOS,
-        anio=anio,
-        fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+        colores=COLORES_GRUPOS  # <-- Esta es la variable que me faltaba
     )
 
     pdf_bytes = weasyprint.HTML(string=html_renderizado).write_pdf()

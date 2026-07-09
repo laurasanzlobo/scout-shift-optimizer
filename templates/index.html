@@ -168,6 +168,7 @@ const TURNO_TIME = {
   Comida:   '13:30',
   Cena:     '20:30',
 };
+const GRUPO_LIMPIEZA_COMBINADO = 'CastoresRutas';
 
 let selectedFile = null;
 let asignaciones = [];
@@ -247,6 +248,25 @@ function animateSteps() {
 function getGrupoLimpieza(dia, turno) {
   const entrada = limpiezaPorTurno.find(l => l.Dia === dia && l.Turno === turno);
   return entrada ? entrada.GrupoLimpieza : null;
+}
+
+function getGrupoLimpiezaEtiquetas(grupo) {
+  if (!grupo) return [];
+  if ([GRUPO_LIMPIEZA_COMBINADO, 'Castores / Rutas', 'Castores/Rutas', 'Castores y Rutas'].includes(grupo)) return ['Castores', 'Rutas'];
+  return [grupo];
+}
+
+function renderGrupoLimpieza(grupo) {
+  const etiquetas = getGrupoLimpiezaEtiquetas(grupo);
+  if (!etiquetas.length) return `<span class="tc-limpieza-vacio">—</span>`;
+
+  return `
+    <div class="tc-limpieza-badges">
+      ${etiquetas.map(g => {
+        const c = COLORES[g] || { bg: '#607D8B', t: '#fff' };
+        return `<span class="tc-limpieza-badge" style="background:${c.bg};color:${c.t}">${g}</span>`;
+      }).join('')}
+    </div>`;
 }
 
 /* ════════════════════════════
@@ -372,15 +392,9 @@ function renderTurnos() {
       }).join('');
 
       const grupoLimpieza = getGrupoLimpieza(d, t);
-      const limpiezaHtml = grupoLimpieza
-        ? (() => {
-            const cl = COLORES[grupoLimpieza] || { bg: '#607D8B', t: '#fff' };
-            return `
-              <div class="tc-limpieza-label"><i class="ti ti-broom"></i> Limpieza</div>
-              <span class="tc-limpieza-badge" style="background:${cl.bg};color:${cl.t}">${grupoLimpieza}</span>`;
-          })()
-        : `<div class="tc-limpieza-label"><i class="ti ti-broom"></i> Limpieza</div>
-           <span class="tc-limpieza-vacio">—</span>`;
+      const limpiezaHtml = `
+        <div class="tc-limpieza-label"><i class="ti ti-broom"></i> Limpieza</div>
+        ${renderGrupoLimpieza(grupoLimpieza)}`;
 
       html += `
         <div class="turno-card" style="animation-delay:${delay}ms">

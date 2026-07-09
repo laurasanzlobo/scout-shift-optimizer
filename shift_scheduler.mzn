@@ -4,7 +4,7 @@
 % para mantener la coherencia con las fechas y facilitar la indexación.
 set of int: DIAS = 1..13;
 set of int: TURNOS = 1..3; % 1: Desayuno, 2: Comida, 3: Cena
-set of int: GRUPOS = 1..5; % 1: Castores, 2: Lobatos, 3: Ranger, 4: Pioneros, 5: Rutas
+set of int: GRUPOS = 1..4; % 1: Castores/Rutas, 2: Lobatos, 3: Ranger, 4: Pioneros
 
 int: n_personas;
 set of int: PERSONAS = 1..n_personas;
@@ -18,7 +18,7 @@ array[PERSONAS] of int: limite_turnos; % Cuota calculada en Python según dispon
 
 % Matrices precalculadas para simplificar el modelo matemático.
 array[DIAS, TURNOS] of bool: turno_activo; 
-array[DIAS, TURNOS] of 0..5: grupo_limpia; % 0 indica que ningún grupo limpia en ese turno
+array[DIAS, TURNOS] of 0..4: grupo_limpia; % 0 indica que ningún grupo limpia en ese turno
 
 % --- Variables de decisión ---
 % Matriz booleana 3D. comedor[d, t, p] será true si asigno a la persona 'p' al día 'd' en el turno 't'.
@@ -72,9 +72,9 @@ constraint forall(p in PERSONAS) (
 % FUNCIÓN OBJETIVO Y RESTRICCIONES FLEXIBLES (Soft Constraints)
 % -----------------------------------------------------------------------------
 
-% Penalizo la falta de representación. Excluyo Rutas de esta regla porque solo hay
-% un responsable y no debe bloquearse su servicio por una cobertura de grupo.
-var int: pen_representacion = sum(d in DIAS, t in TURNOS, g in GRUPOS where turno_activo[d, t] /\ grupo_limpia[d, t] != g /\ g != 5) (
+% Penalizo la falta de representación. Intento asegurar que haya al menos un responsable
+% por grupo sirviendo (siempre que su grupo no esté limpiando).
+var int: pen_representacion = sum(d in DIAS, t in TURNOS, g in GRUPOS where turno_activo[d, t] /\ grupo_limpia[d, t] != g) (
     bool2int(sum(p in PERSONAS where grupo_persona[p] == g)(comedor[d, t, p]) == 0)
 );
 

@@ -563,7 +563,16 @@ body {
   display: flex; align-items: center; gap: 4px;
 }
 .tc-limpieza-label i { font-size: 11px; }
+.tc-limpieza-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
 .tc-limpieza-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11px; font-weight: 700;
   padding: 2px 9px;
   border-radius: 6px;

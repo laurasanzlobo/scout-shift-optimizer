@@ -8,7 +8,18 @@ from pathlib import Path
 # ─────────────────── Parámetros globales ──────────────────────────────────────
 DIAS: List[int] = [d for d in range(15, 31) if d not in {17, 18, 19}]
 TURNOS: List[str] = ["Desayuno", "Comida", "Cena"]
-GRUPOS: List[str] = ["Castores", "Lobatos", "Ranger", "Pioneros", "Rutas"]
+
+# Internamente Castores y Rutas se tratan como un único grupo para la
+# optimización, pero se siguen mostrando por separado en la salida.
+GRUPO_CASTORES_RUTAS = "CastoresRutas"
+GRUPOS: List[str] = [GRUPO_CASTORES_RUTAS, "Lobatos", "Ranger", "Pioneros"]
+GRUPO_INTERNO_POR_VISIBLE = {
+    "Castores": GRUPO_CASTORES_RUTAS,
+    "Rutas": GRUPO_CASTORES_RUTAS,
+    "Lobatos": "Lobatos",
+    "Ranger": "Ranger",
+    "Pioneros": "Pioneros",
+}
 
 NO_DESAYUNO_DAYS = {20}
 NO_COMIDA_DAYS_COMEDOR: Set[int] = {20, 25, 30}
@@ -31,30 +42,30 @@ def cargar_responsables(file_stream) -> pd.DataFrame:
         base = ["Nombre", "Grupo", "TeatroComida", "TeatroCena", "Disponible"][: df.shape[1]]
         base += [f"X{i}" for i in range(df.shape[1] - len(base))]
         df.columns = base
-
-
+    df["Grupo"] = df["Grupo"].astype(str).str.strip()
+    df["GrupoInterno"] = df["Grupo"].map(lambda g: GRUPO_INTERNO_POR_VISIBLE.get(g, g))
     df["DiasTeatroComida"] = df.get("TeatroComida", "").apply(_split_days)
     df["DiasTeatroCena"] = df.get("TeatroCena", "").apply(_split_days)
     disp = df.get("Disponible", "").apply(_split_days)
     df["DiasDisponibles"] = [s if s else set(DIAS) for s in disp]
 
-    return df[["Nombre", "Grupo", "DiasDisponibles", "DiasTeatroComida", "DiasTeatroCena"]]
+    return df[["Nombre", "Grupo", "GrupoInterno", "DiasDisponibles", "DiasTeatroComida", "DiasTeatroCena"]]
 
 def plan_limpieza() -> Dict[Tuple[int, str], str]:
     mapping: Dict[Tuple[int, str], str] = {}
     for i, d in enumerate(DIAS):
         if d not in NO_DESAYUNO_DAYS:
-            mapping[(d, "Desayuno")] = GRUPOS[i % 5]
+            mapping[(d, "Desayuno")] = GRUPOS[i % 4]
         if d not in NO_COMIDA_DAYS_COMEDOR:
-            mapping[(d, "Comida")] = GRUPOS[(i + 1) % 5]
+            mapping[(d, "Comida")] = GRUPOS[(i + 1) % 4]
         if d not in NO_CENA_DAYS:
-            mapping[(d, "Cena")] = GRUPOS[(i + 2) % 5]
+            mapping[(d, "Cena")] = GRUPOS[(i + 2) % 4]
     return mapping
 
 def resolver_con_minizinc(df: pd.DataFrame, limpieza_dict: Dict[Tuple[int, str], str]):
     n_personas = len(df)
     mapa_grupos = {grupo: idx + 1 for idx, grupo in enumerate(GRUPOS)}
-    grupo_persona = [mapa_grupos.get(g, 1) for g in df["Grupo"]]
+    grupo_persona = [mapa_grupos.get(g, 1) for g in df["GrupoInterno"]]
 
     disponible = []
     teatro_comida = []
