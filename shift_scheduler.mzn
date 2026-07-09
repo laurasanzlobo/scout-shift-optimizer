@@ -1,7 +1,7 @@
 % Modelo de asignación de turnos de Comedor - Campamento Verano 2026
 
-% He mapeado los días reales del campamento (15 al 30 de julio) directamente al set de DIAS 
-set of int: DIAS = 1..13;
+% He mapeado los días reales del campamento (15 al 29 de julio) directamente al set de DIAS 
+set of int: DIAS = 1..12;
 set of int: TURNOS = 1..3; % 1: Desayuno, 2: Comida, 3: Cena
 set of int: GRUPOS = 1..4; % 1: Castores/Rutas, 2: Lobatos, 3: Ranger, 4: Pioneros
 
@@ -87,6 +87,11 @@ constraint forall(p in PERSONAS where disponible_siempre[p]) (
     abs(sum(d in DIAS, t in TURNOS)(bool2int(comedor[d, t, p])) - cuota_ideal[p]) <= margen_equidad
 );
 
+% 10. Imposible que coincidan 4 o más responsables de la misma rama en un turno
+constraint forall(d in DIAS, t in TURNOS, g in GRUPOS where turno_activo[d, t]) (
+    sum(p in PERSONAS where grupo_persona[p] == g)(bool2int(comedor[d, t, p])) <= 3
+);
+
 % -----------------------------------------------------------------------------
 % FUNCIÓN OBJETIVO Y RESTRICCIONES FLEXIBLES (Soft Constraints)
 % -----------------------------------------------------------------------------
@@ -103,10 +108,6 @@ var int: pen_grupo = sum(d in DIAS, t in TURNOS, g in GRUPOS where turno_activo[
 );
 
 % Calculo la diferencia entre los turnos asignados y mi cuota ideal.
-% Al elevar esta diferencia al cuadrado (pow), genero una penalización de curva 
-% tipo exponencial: desviarme por 1 turno apenas suma coste, pero desviarme 
-% por 3 o 4 turnos dispara la penalización, forzando al solver a repartir 
-% la carga de forma mucho más justa y uniforme entre todo el kraal.
 var int: pen_equidad = sum(p in PERSONAS) (
     pow(
         sum(d in DIAS, t in TURNOS)(bool2int(comedor[d, t, p])) - cuota_ideal[p], 
@@ -114,6 +115,5 @@ var int: pen_equidad = sum(p in PERSONAS) (
     )
 );
 
-% El objetivo es minimizar la puntuación total. Le doy el mayor peso (por ejemplo, 100) 
-% a mi nueva penalización de equidad para que el solver priorice el reparto justo por encima de todo.
-solve minimize (pen_equidad * 100) + (pen_representacion * 50) + (pen_grupo * 10);
+% El objetivo es minimizar la puntuación total.
+solve minimize (pen_equidad * 50) + (pen_representacion * 50) + (pen_grupo * 10);

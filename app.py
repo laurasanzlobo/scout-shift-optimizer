@@ -133,18 +133,46 @@ def generar_horario():
 
         turnos_nombres = ["Desayuno", "Comida", "Cena"]
         matriz_comedor = resultado.solution.comedor
+        total_dias_campamento = len(DIAS)
 
         asignaciones_finales = []
+        plazas_cubiertas = 0
         for d_idx, d in enumerate(DIAS):
             for t_idx, t_name in enumerate(turnos_nombres):
                 for p_idx, (_, row) in enumerate(df_original.iterrows()):
                     if matriz_comedor[d_idx][t_idx][p_idx]:
+                        plazas_cubiertas += 1
                         asignaciones_finales.append({
                             "Dia":    d,
                             "Turno":  t_name,
                             "Nombre": row["Nombre"],
                             "Grupo":  row["Grupo"],
                         })
+
+        plazas_totales = plazas_cubiertas
+
+        # Yo calculo la media solo con los responsables que asisten todos los días.
+        asistentes_campamento_completo = [
+            row for _, row in df_original.iterrows()
+            if len(row["DiasDisponibles"]) == total_dias_campamento
+        ]
+        turnos_por_persona_completa = {}
+        for fila in asignaciones_finales:
+            turnos_por_persona_completa[fila["Nombre"]] = turnos_por_persona_completa.get(fila["Nombre"], 0) + 1
+
+        if asistentes_campamento_completo:
+            suma_turnos = sum(turnos_por_persona_completa.get(row["Nombre"], 0) for row in asistentes_campamento_completo)
+            carga_media = suma_turnos / len(asistentes_campamento_completo)
+        else:
+            carga_media = 0.0
+
+        metricas_dashboard = {
+            "kraal_activo": len(df_original),
+            "plazas_cubiertas": plazas_cubiertas,
+            "plazas_totales": plazas_totales,
+            "plazas_porcentaje": 100 if plazas_totales else 0,
+            "carga_media": round(carga_media, 1),
+        }
 
         # Traducir limpieza_dict {(dia, turno): grupo} a una lista serializable en JSON,
         # ya que las claves de tupla no son válidas en JSON.
@@ -164,6 +192,7 @@ def generar_horario():
             "session_id":   session_id,
             "asignaciones": asignaciones_finales,
             "limpieza":     limpieza_final,
+            "metricas":     metricas_dashboard,
         })
 
     except Exception as exc:

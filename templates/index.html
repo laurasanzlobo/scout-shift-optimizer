@@ -173,6 +173,7 @@ const GRUPO_LIMPIEZA_COMBINADO = 'CastoresRutas';
 let selectedFile = null;
 let asignaciones = [];
 let limpiezaPorTurno = [];
+let metricasDashboard = null;
 let sessionId    = null;
 let activeFilter = 'all';
 
@@ -298,6 +299,7 @@ btnGenerar.addEventListener('click', async () => {
 
     asignaciones     = data.asignaciones;
     limpiezaPorTurno = data.limpieza || [];
+    metricasDashboard = data.metricas || null;
     sessionId        = data.session_id;
     document.getElementById('btn-excel').href = `/descargar/excel/${sessionId}`;
     document.getElementById('btn-pdf').href   = `/descargar/pdf/${sessionId}`;
@@ -321,32 +323,30 @@ btnGenerar.addEventListener('click', async () => {
 function renderResults() {
   const personas = [...new Set(asignaciones.map(a => a.Nombre))];
   const dias     = [...new Set(asignaciones.map(a => a.Dia))].sort((a, b) => a - b);
-  const total    = asignaciones.length;
 
   document.getElementById('res-meta').textContent =
-    `${personas.length} responsables · ${dias.length} días · ${total} turnos`;
+    `${personas.length} responsables · ${dias.length} días`;
 
-  // Stats
-  const dobletes = dias.filter(d => {
-    const dp = asignaciones.filter(a => a.Dia === d);
-    return personas.some(p =>
-      dp.some(a => a.Nombre === p && a.Turno === 'Comida') &&
-      dp.some(a => a.Nombre === p && a.Turno === 'Cena')
-    );
-  }).length;
+  const metricas = metricasDashboard || {
+    kraal_activo: personas.length,
+    plazas_cubiertas: asignaciones.length,
+    plazas_totales: asignaciones.length,
+    plazas_porcentaje: 100,
+    carga_media: 0,
+  };
 
   document.getElementById('stats-row').innerHTML = `
     <div class="stat-card">
-      <div class="stat-num">${personas.length}</div>
+      <div class="stat-num">${metricas.kraal_activo}</div>
       <div class="stat-label">Responsables</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num">${total}</div>
-      <div class="stat-label">Turnos</div>
+      <div class="stat-num stat-num-wide">${metricas.plazas_cubiertas} / ${metricas.plazas_totales} plazas (${metricas.plazas_porcentaje}%)</div>
+      <div class="stat-label">Plazas cubiertas</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num">${dobletes}</div>
-      <div class="stat-label">Dobletes</div>
+      <div class="stat-num stat-num-wide">~${metricas.carga_media.toFixed(1)} turnos/persona</div>
+      <div class="stat-label">Carga media</div>
     </div>`;
 
   // Trigger bar animation

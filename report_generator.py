@@ -30,7 +30,7 @@ COLORES_TURNOS = {
     "Cena":     "BBDEFB",
 }
 
-DIAS = [d for d in range(15, 31) if d not in {17, 18, 19}]
+DIAS = [d for d in range(15, 30) if d not in {17, 18, 19}]
 TURNOS = ["Desayuno", "Comida", "Cena"]
 GRUPO_CASTORES_RUTAS = "CastoresRutas"
 
@@ -257,19 +257,17 @@ _PLANTILLA_HTML = """
     letter-spacing: 1px;
     margin-bottom: 0.1cm;
   }
+  .header::after {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 2px;
+    margin-top: 0.25cm;
+    background: #FF9800;
+  }
   .header p {
     font-size: 12pt;
     color: #7F8C8D;
-  }
-  
-  .section-title {
-    font-size: 14pt;
-    font-weight: bold;
-    color: #2C3E50;
-    margin-bottom: 0.4cm;
-    border-bottom: 2px solid #FF9800;
-    display: inline-block;
-    padding-bottom: 0.1cm;
   }
 
   /* ── TABLAS GLOBALES ── */
@@ -304,8 +302,7 @@ _PLANTILLA_HTML = """
     height: 1.8cm; 
     padding: 0.1cm;
   }
-  /* He reducido drásticamente los márgenes y tamaños de fuente para que 
-     quepan perfectamente Castores y Rutas juntos sin desbordar. */
+
   .badge-limpieza {
     display: inline-block;
     padding: 0.15cm 0.25cm;
@@ -313,7 +310,7 @@ _PLANTILLA_HTML = """
     font-weight: 700;
     border-radius: 0.15cm;
     margin: 0.05cm 0;
-    white-space: nowrap; /* Evito que el nombre de un grupo se parta en dos líneas */
+    white-space: nowrap; 
   }
   .vacio {
     color: #95A5A6;
@@ -322,9 +319,9 @@ _PLANTILLA_HTML = """
 
   /* ── TABLA COMEDOR (PÁGINA 2) ── */
   .td-comedor {
-    height: 4.5cm; /* Le doy más altura porque es una lista de personas */
+    height: 4.5cm; 
     padding: 0.2cm;
-    font-size: 10pt;
+    font-size: 11pt;
     text-align: center;
     vertical-align: middle;
     line-height: 1.4;
@@ -335,10 +332,9 @@ _PLANTILLA_HTML = """
 
 <div class="pagina">
   <div class="header">
-    <h1>Cuadrantes de Campamento</h1>
-    <p>Julio 2026</p>
+    <h1>Turnos de Limpieza</h1>
+    <p>Verano 2026</p>
   </div>
-  <div class="section-title">Equipos de Limpieza</div>
   
   <table>
     <thead>
@@ -373,10 +369,9 @@ _PLANTILLA_HTML = """
 
 <div class="pagina salto-pagina">
   <div class="header">
-    <h1>Cuadrantes de Campamento</h1>
-    <p>Julio 2026</p>
+    <h1>Turnos de Comedor</h1>
+    <p>Verano 2026</p>
   </div>
-  <div class="section-title">Servicio de Comedor</div>
   
   <table>
     <thead>

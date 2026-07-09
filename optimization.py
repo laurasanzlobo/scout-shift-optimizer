@@ -6,7 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 # ─────────────────── Parámetros globales ──────────────────────────────────────
-DIAS: List[int] = [d for d in range(15, 31) if d not in {17, 18, 19}]
+DIAS: List[int] = [d for d in range(15, 30) if d not in {17, 18, 19}]
 TURNOS: List[str] = ["Desayuno", "Comida", "Cena"]
 
 # Internamente Castores y Rutas se tratan como un único grupo para la
@@ -21,9 +21,9 @@ GRUPO_INTERNO_POR_VISIBLE = {
     "Pioneros": "Pioneros",
 }
 
-NO_DESAYUNO_DAYS = {20}
-NO_COMIDA_DAYS_COMEDOR: Set[int] = {20, 25, 30}
-NO_CENA_DAYS: Set[int] = {30}
+NO_DESAYUNO_DAYS = {15, 20}
+NO_COMIDA_DAYS_COMEDOR: Set[int] = {20, 25}
+NO_CENA_DAYS: Set[int] = set()
 
 def _split_days(text: str) -> Set[int]:
     """Parseo mis días separados por ';' o ',' y me quedo solo con los que
@@ -90,7 +90,7 @@ def plan_limpieza() -> Dict[Tuple[int, str], str]:
     return mapping
 
 def resolver_con_minizinc(df: pd.DataFrame, limpieza_dict: Dict[Tuple[int, str], str],
-                           margen_equidad: int = 0):
+                           margen_equidad: int = 1):
     """Añado margen_equidad como parámetro configurable: es la desviación
     máxima que le permito a cada responsable de campamento completo respecto
     a su propia cuota ideal. Lo subo o bajo desde aquí sin tocar el .mzn."""
