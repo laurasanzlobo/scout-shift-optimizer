@@ -26,10 +26,17 @@ NO_COMIDA_DAYS_COMEDOR: Set[int] = {20, 25, 30}
 NO_CENA_DAYS: Set[int] = {30}
 
 def _split_days(text: str) -> Set[int]:
+    """Parseo mis días separados por ';' o ',' y me quedo solo con los que
+    de verdad existen en el campamento. Antes estaba metiendo en el set
+    cualquier número que escribiera (p. ej. 17, 18, 19, que ni siquiera son
+    días de campamento), y eso me estaba inflando artificialmente la cuota
+    teórica de quien tuviera un despiste en el CSV, además de hacer que
+    `disponible_siempre` diera falsos negativos/positivos."""
     if not text or pd.isna(text):
         return set()
     tokens = [t.strip() for t in str(text).replace(",", ";").split(";") if t.strip()]
-    return {int(t.split()[0]) for t in tokens if t.split()[0].isdigit()}
+    dias_validos = {int(t.split()[0]) for t in tokens if t.split()[0].isdigit()}
+    return dias_validos & set(DIAS)
 
 def cargar_responsables(file_stream) -> pd.DataFrame:
     df = pd.read_csv(file_stream, dtype=str).fillna("")
@@ -51,6 +58,26 @@ def cargar_responsables(file_stream) -> pd.DataFrame:
 
     return df[["Nombre", "Grupo", "GrupoInterno", "DiasDisponibles", "DiasTeatroComida", "DiasTeatroCena"]]
 
+def calcular_presencia_grupo(df: pd.DataFrame) -> List[List[int]]:
+    """Calculo, para cada día y cada rama, cuántos responsables de esa rama
+    están físicamente presentes en el campamento (según su DiasDisponibles).
+
+    Esto es lo que me permite saber, p.ej., que Lobatos solo tiene 3
+    efectivos reales antes de que llegue Akela el día 24, en vez de asumir
+    siempre los 4 que hay en plantilla.
+    """
+    matriz: List[List[int]] = []
+    for d in DIAS:
+        fila = []
+        for grupo in GRUPOS:  # mismo orden que uso para mapa_grupos
+            presentes = sum(
+                1 for _, row in df.iterrows()
+                if row["GrupoInterno"] == grupo and d in row["DiasDisponibles"]
+            )
+            fila.append(presentes)
+        matriz.append(fila)
+    return matriz
+
 def plan_limpieza() -> Dict[Tuple[int, str], str]:
     mapping: Dict[Tuple[int, str], str] = {}
     for i, d in enumerate(DIAS):
@@ -62,7 +89,11 @@ def plan_limpieza() -> Dict[Tuple[int, str], str]:
             mapping[(d, "Cena")] = GRUPOS[(i + 2) % 4]
     return mapping
 
-def resolver_con_minizinc(df: pd.DataFrame, limpieza_dict: Dict[Tuple[int, str], str]):
+def resolver_con_minizinc(df: pd.DataFrame, limpieza_dict: Dict[Tuple[int, str], str],
+                           margen_equidad: int = 0):
+    """Añado margen_equidad como parámetro configurable: es la desviación
+    máxima que le permito a cada responsable de campamento completo respecto
+    a su propia cuota ideal. Lo subo o bajo desde aquí sin tocar el .mzn."""
     n_personas = len(df)
     mapa_grupos = {grupo: idx + 1 for idx, grupo in enumerate(GRUPOS)}
     grupo_persona = [mapa_grupos.get(g, 1) for g in df["GrupoInterno"]]
@@ -102,18 +133,20 @@ def resolver_con_minizinc(df: pd.DataFrame, limpieza_dict: Dict[Tuple[int, str],
         grupo_limpia.append(dia_limpieza)
 
     total_dias_disponibles_kraal = sum(len(row["DiasDisponibles"]) for _, row in df.iterrows())
+    presencia_grupo = calcular_presencia_grupo(df)
+    total_dias_campamento = len(DIAS)
 
     limite_turnos = []
+    cuota_ideal = []
+    disponible_siempre = []
     for _, row in df.iterrows():
         dias_disp = len(row["DiasDisponibles"])
-        
-        # Ahora la cuota teórica es justa y proporcional a la disponibilidad real
         cuota_teorica = round(total_plazas_necesarias * dias_disp / total_dias_disponibles_kraal)
-        
-        # Añado un margen de +3 para que el solver respire y no haga timeout
-        limite_turnos.append(cuota_teorica + 3)
+        limite_turnos.append(cuota_teorica + 5)
+        cuota_ideal.append(cuota_teorica)
+        disponible_siempre.append(dias_disp == total_dias_campamento)
 
-    modelo = minizinc.Model(Path(__file__).with_name("shift_scheduler.mzn"))    
+    modelo = minizinc.Model(Path(__file__).with_name("shift_scheduler.mzn"))
     solver = minizinc.Solver.lookup("gecode")
     instancia = minizinc.Instance(solver, modelo)
 
@@ -125,8 +158,11 @@ def resolver_con_minizinc(df: pd.DataFrame, limpieza_dict: Dict[Tuple[int, str],
     instancia["limite_turnos"] = limite_turnos
     instancia["turno_activo"] = turno_activo
     instancia["grupo_limpia"] = grupo_limpia
+    instancia["presencia_grupo"] = presencia_grupo
+    instancia["cuota_ideal"] = cuota_ideal
+    instancia["disponible_siempre"] = disponible_siempre
+    instancia["margen_equidad"] = margen_equidad
 
-    resultado = instancia.solve(timeout=timedelta(seconds=15))
+    resultado = instancia.solve(timeout=timedelta(seconds=30))
 
     return resultado, df
-
