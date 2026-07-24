@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Turnos Comedor · Campamento 2026</title>
+<title>Turnos Comedor · Campamento Scout</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -12,20 +12,24 @@
 <body>
 
 <div id="app">
-  <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">Turnos Comedor Campamento Scout 2026</h1>
+  <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">Turnos Comedor · Campamento Scout</h1>
 
   <header class="brand">
     <div class="brand-mark"><i class="ti ti-tent" aria-hidden="true"></i></div>
     <div>
       <div class="brand-name">Turnos Comedor</div>
-      <div class="brand-tag">Campamento Verano 2026</div>
+      <div class="brand-tag">Campamento Scout</div>
     </div>
   </header>
 
   <div id="screen-upload" class="screen active">
     <p class="hero-eyebrow">Solver de optimización</p>
-    <h2 class="hero-title">Texto de prueba,<br><em>scouts.</em></h2>
-    <p class="hero-sub">Sube el CSV de responsables y el motor asigna los turnos de forma equitativa, respetando disponibilidades y restricciones de teatro.</p>
+    <h2 class="hero-title">Turnos Campamento Scout,<br><em>verano 2026.</em></h2>
+    <p class="hero-sub">Sube el CSV de responsables y el motor reparte los turnos de comedor de forma equitativa, respetando disponibilidades y teatros.</p>
+
+    <button class="btn-info" id="btn-como-funciona" type="button">
+      <i class="ti ti-help-circle" aria-hidden="true"></i> ¿Cómo funciona?
+    </button>
 
     <div class="dropzone" id="dropzone">
       <input type="file" accept=".csv" id="file-input" aria-label="Seleccionar archivo CSV">
@@ -47,15 +51,16 @@
     </button>
 
     <div class="fmt-hint">
-      <p class="fmt-hint-title"><i class="ti ti-info-circle" aria-hidden="true"></i> Columnas del CSV</p>
-      <div class="fmt-cols">
-        <code>Nombre</code>
-        <code>Grupo</code>
-        <code>TeatroComida</code>
-        <code>TeatroCena</code>
-        <code>Disponible</code>
-      </div>
-      <p class="fmt-note">Días separados por <code>;</code> — ej: <code>20; 23; 25</code>. Vacío = disponible todos los días.</p>
+      <p class="fmt-hint-title"><i class="ti ti-info-circle" aria-hidden="true"></i> Cómo tiene que ser el CSV</p>
+      <p class="fmt-note" style="margin-top:0; margin-bottom:12px;">Una fila por responsable, con estas 5 columnas:</p>
+      <ul class="fmt-col-list">
+        <li><code>Nombre</code><span>Nombre del responsable</span></li>
+        <li><code>Grupo</code><span>Su rama (Castores, Lobatos, Ranger, Pioneros, Rutas…)</span></li>
+        <li><code>TeatroComida</code><span>Días en los que hace teatro a la hora de comer, y por tanto no puede servir</span></li>
+        <li><code>TeatroCena</code><span>Días en los que hace teatro a la hora de cenar, y por tanto no puede servir</span></li>
+        <li><code>Disponible</code><span>Días de campamento en los que <strong>está presente</strong> (vacío significa que está todos los días)</span></li>
+      </ul>
+      <p class="fmt-note">En <code>Disponible</code>, <code>TeatroComida</code> y <code>TeatroCena</code> los días van separados por <code>;</code> — ej: <code>20; 23; 25</code>.</p>
     </div>
   </div>
 
@@ -145,6 +150,52 @@
       <i class="ti ti-refresh" aria-hidden="true"></i> Subir nuevo CSV
     </button>
   </div>
+
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <h3 id="modal-title"><i class="ti ti-tent" aria-hidden="true"></i> Cómo funciona el reparto</h3>
+        <button class="modal-close" id="btn-modal-close" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-step">
+          <div class="modal-step-icon"><i class="ti ti-users-group"></i></div>
+          <div>
+            <p class="modal-step-title">Ramas y responsables</p>
+            <p class="modal-step-text">El campamento se organiza en ramas (Castores, Lobatos, Ranger, Pioneros, Rutas…). Cada rama tiene sus responsables al frente.</p>
+          </div>
+        </div>
+        <div class="modal-step">
+          <div class="modal-step-icon"><i class="ti ti-tools-kitchen-2"></i></div>
+          <div>
+            <p class="modal-step-title">Tres turnos al día</p>
+            <p class="modal-step-text">En desayuno, comida y cena, un grupo de responsables de distintas ramas sirve en el comedor mientras el resto del campamento come.</p>
+          </div>
+        </div>
+        <div class="modal-step">
+          <div class="modal-step-icon"><i class="ti ti-trash"></i></div>
+          <div>
+            <p class="modal-step-title">Una rama limpia, el resto no</p>
+            <p class="modal-step-text">En cada turno hay una rama entera encargada de la limpieza. Esa rama no sirve en el comedor ese turno: nunca coincide una misma rama sirviendo y limpiando a la vez.</p>
+          </div>
+        </div>
+        <div class="modal-step">
+          <div class="modal-step-icon"><i class="ti ti-masks-theater"></i></div>
+          <div>
+            <p class="modal-step-title">Los teatros bloquean turnos</p>
+            <p class="modal-step-text">Muchos días hay teatros para los niños. Los responsables que participan en el teatro de comida o de cena no están disponibles para servir en ese turno, porque están ocupados con la actuación.</p>
+          </div>
+        </div>
+        <div class="modal-step">
+          <div class="modal-step-icon"><i class="ti ti-scale"></i></div>
+          <div>
+            <p class="modal-step-title">Reparto equitativo</p>
+            <p class="modal-step-text">El motor de optimización reparte los turnos según los días que cada responsable está en el campamento, para que nadie acabe sirviendo muchos más turnos que el resto.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -176,6 +227,27 @@ let limpiezaPorTurno = [];
 let metricasDashboard = null;
 let sessionId    = null;
 let activeFilter = 'all';
+
+/* ════════════════════════════
+   EXPLANATION MODAL
+════════════════════════════ */
+const modalOverlay = document.getElementById('modal-overlay');
+
+function openModal() {
+  modalOverlay.classList.add('open');
+}
+function closeModal() {
+  modalOverlay.classList.remove('open');
+}
+
+document.getElementById('btn-como-funciona').addEventListener('click', openModal);
+document.getElementById('btn-modal-close').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
 
 /* ════════════════════════════
    SCREEN MANAGEMENT

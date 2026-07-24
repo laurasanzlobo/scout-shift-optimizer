@@ -163,6 +163,6 @@ def resolver_con_minizinc(df: pd.DataFrame, limpieza_dict: Dict[Tuple[int, str],
     instancia["disponible_siempre"] = disponible_siempre
     instancia["margen_equidad"] = margen_equidad
 
-    resultado = instancia.solve(timeout=timedelta(seconds=30))
+    resultado = instancia.solve(timeout=timedelta(seconds=6))
 
     return resultado, df
